@@ -1,29 +1,29 @@
 name: Bootstrap lockfile
 
 on:
-	workflow_dispatch:
+  workflow_dispatch:
 
 permissions:
-	contents: write
-	packages: read
+  contents: write
+  packages: read
 
 jobs:
-	lockfile:
-		runs-on: ubuntu-24.04
-		steps:
-			- uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-			- uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa
-			- uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
-			  with:
-				  node-version: "22"
-				  registry-url: https://npm.pkg.github.com
-				  scope: "@bearfire-dev"
-			- run: pnpm install --lockfile-only
-			  env:
-				  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-			- run: |
-				  git config user.name github-actions[bot]
-				  git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-				  git add pnpm-lock.yaml
-				  git commit -m "Generate pnpm lockfile"
-				  git push
+  lockfile:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: "22"
+          registry-url: https://npm.pkg.github.com
+          scope: "@bearfire-dev"
+      - run: pnpm install --lockfile-only
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add pnpm-lock.yaml
+          git commit -m "Generate pnpm lockfile"
+          git push

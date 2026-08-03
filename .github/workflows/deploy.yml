@@ -1,0 +1,119 @@
+name: Tailbridge deployment
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  push:
+    branches: [master]
+    paths:
+      - "infra/**"
+      - "sst.config.ts"
+      - "package.json"
+      - "pnpm-lock.yaml"
+  workflow_dispatch:
+    inputs:
+      package_version:
+        description: Exact package version for a rollback. Leave empty to deploy master.
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: tailbridge-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment: production
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          registry-url: https://npm.pkg.github.com
+          scope: "@bearfire-dev"
+      - name: Resolve the artifact version
+        id: artifact
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
+          REQUESTED_VERSION: ${{ inputs.package_version }}
+        run: |
+          package=@bearfire-dev/tailscale-railway-quic-bridge
+          if test -n "$REQUESTED_VERSION"; then
+            version="$(npm view "$package@$REQUESTED_VERSION" version --registry=https://npm.pkg.github.com)"
+            test "$version" = "$REQUESTED_VERSION"
+          else
+            version="$(npm view "$package@master" version --registry=https://npm.pkg.github.com)"
+          fi
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Install the exact artifact
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
+          VERSION: ${{ steps.artifact.outputs.version }}
+        run: |
+          pnpm add --save-exact "@bearfire-dev/tailscale-railway-quic-bridge@$VERSION" --lockfile-only
+          pnpm install --frozen-lockfile
+      - name: Compare the deployed artifact
+        id: deployed
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          EVENT_NAME: ${{ github.event_name }}
+          TARGET_VERSION: ${{ steps.artifact.outputs.version }}
+        run: |
+          current="$(pnpm sst state export --stage production 2>/dev/null | jq -r '.deployment.resources[]? | select(.type == "pulumi:pulumi:Stack") | .outputs.artifactVersion // empty' || true)"
+          if test "$EVENT_NAME" = "schedule" && test "$current" = "$TARGET_VERSION"; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Get the runner address
+        if: steps.deployed.outputs.changed == 'true'
+        id: runner
+        run: |
+          address="$(curl --fail --silent --show-error --proto '=https' https://api.ipify.org)"
+          test -n "$address"
+          echo "cidr=$address/32" >> "$GITHUB_OUTPUT"
+      - name: Type-check and test
+        if: steps.deployed.outputs.changed == 'true'
+        env:
+          EDGE_SSH_SOURCE_CIDRS: ${{ vars.EDGE_SSH_SOURCE_CIDRS }},${{ steps.runner.outputs.cidr }}
+          TAILBRIDGE_CONNECTORS_JSON: ${{ vars.TAILBRIDGE_CONNECTORS_JSON }}
+          TAILBRIDGE_EDGE_ID: ${{ vars.TAILBRIDGE_EDGE_ID }}
+          TAILBRIDGE_VIRTUAL_NETWORK: ${{ vars.TAILBRIDGE_VIRTUAL_NETWORK }}
+          DIGITALOCEAN_REGION: ${{ vars.DIGITALOCEAN_REGION }}
+          DIGITALOCEAN_SIZE: ${{ vars.DIGITALOCEAN_SIZE }}
+        run: |
+          pnpm check
+          pnpm test
+      - name: Set the SST secret
+        if: steps.deployed.outputs.changed == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          TAILSCALE_AUTH_KEY: ${{ secrets.TAILSCALE_AUTH_KEY }}
+        run: printf '%s' "$TAILSCALE_AUTH_KEY" | pnpm sst secret set TailscaleAuthKey --stage production
+      - name: Preview and deploy
+        if: steps.deployed.outputs.changed == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          EDGE_SSH_SOURCE_CIDRS: ${{ vars.EDGE_SSH_SOURCE_CIDRS }},${{ steps.runner.outputs.cidr }}
+          TAILBRIDGE_CONNECTORS_JSON: ${{ vars.TAILBRIDGE_CONNECTORS_JSON }}
+          TAILBRIDGE_EDGE_ID: ${{ vars.TAILBRIDGE_EDGE_ID }}
+          TAILBRIDGE_VIRTUAL_NETWORK: ${{ vars.TAILBRIDGE_VIRTUAL_NETWORK }}
+          DIGITALOCEAN_REGION: ${{ vars.DIGITALOCEAN_REGION }}
+          DIGITALOCEAN_SIZE: ${{ vars.DIGITALOCEAN_SIZE }}
+        run: |
+          pnpm sst diff --stage production
+          pnpm sst deploy --stage production

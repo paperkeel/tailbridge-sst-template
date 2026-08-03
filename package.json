@@ -1,0 +1,26 @@
+{
+	"name": "tailbridge-sst-template",
+	"private": true,
+	"type": "module",
+	"packageManager": "pnpm@10.34.5",
+	"engines": {
+		"node": ">=22",
+		"pnpm": "10.34.5"
+	},
+	"scripts": {
+		"check": "sst install && tsc --noEmit",
+		"test": "vitest run",
+		"diff": "sst diff",
+		"deploy": "sst deploy",
+		"remove": "sst remove"
+	},
+	"dependencies": {
+		"@bearfire-dev/tailscale-railway-quic-bridge": "master",
+		"sst": "4.17.1"
+	},
+	"devDependencies": {
+		"@types/node": "26.1.2",
+		"typescript": "6.0.3",
+		"vitest": "4.1.10"
+	}
+}

@@ -12,13 +12,10 @@ describe("template workflows", () => {
 				`${templateRoot}/.github/workflows/${name}`,
 				"utf8",
 			);
-			const runners = workflow.match(/^\s+runs-on: (.+)$/gm) ?? [];
-			expect(runners.length).toBeGreaterThan(0);
-			expect(
-				runners.every((runner) =>
-					runner.endsWith("blacksmith-2vcpu-ubuntu-2404"),
-			),
-			).toBe(true);
+			const runners = [
+				...workflow.matchAll(/^\s+runs-on: (.+)$/gm),
+			].map(([, runner]) => runner);
+			expect(runners).toEqual(["blacksmith-2vcpu-ubuntu-2404"]);
 		}
 	});
 

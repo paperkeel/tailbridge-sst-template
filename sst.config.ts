@@ -1,10 +1,8 @@
 /// <reference path="./.sst/platform/config.d.ts" />
 
-import { Tailbridge } from "@bearfire-dev/tailscale-railway-quic-bridge";
-import { parseConfig, parseHome } from "./infra/config";
-
 export default $config({
-	app() {
+	async app() {
+		const { parseHome } = await import("./infra/config");
 		return {
 			name: "tailbridge",
 			home: parseHome(process.env.SST_HOME),
@@ -12,6 +10,10 @@ export default $config({
 		};
 	},
 	async run() {
+		const [{ Tailbridge }, { parseConfig }] = await Promise.all([
+			import("@bearfire-dev/tailscale-railway-quic-bridge"),
+			import("./infra/config"),
+		]);
 		const config = parseConfig();
 		const deployment = new Tailbridge("Tailbridge", {
 			stage: $app.stage,

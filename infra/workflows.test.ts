@@ -6,6 +6,19 @@ import { describe, expect, it } from "vitest";
 const templateRoot = fileURLToPath(new URL("..", import.meta.url));
 
 describe("template workflows", () => {
+	it("uses the equivalent Blacksmith runner for every job", () => {
+		for (const name of ["check.yml", "deploy.yml"]) {
+			const workflow = readFileSync(
+				`${templateRoot}/.github/workflows/${name}`,
+				"utf8",
+			);
+			const runners = [
+				...workflow.matchAll(/^\s+runs-on: (.+)$/gm),
+			].map(([, runner]) => runner);
+			expect(runners).toEqual(["blacksmith-2vcpu-ubuntu-2404"]);
+		}
+	});
+
 	it("pins each third-party action to a commit", () => {
 		for (const name of ["check.yml", "deploy.yml"]) {
 			const workflow = readFileSync(

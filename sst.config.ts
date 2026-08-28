@@ -11,7 +11,7 @@ export default $config({
 	},
 	async run() {
 		const [{ Tailbridge }, { parseConfig }] = await Promise.all([
-			import("@bearfire-dev/tailscale-railway-quic-bridge"),
+			import("@paperkeel/tailscale-railway-quic-bridge"),
 			import("./infra/config"),
 		]);
 		const config = parseConfig();

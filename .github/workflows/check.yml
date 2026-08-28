@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: 22
           registry-url: https://npm.pkg.github.com
-          scope: "@bearfire-dev"
+          scope: "@paperkeel"
       - run: pnpm install --no-frozen-lockfile
         env:
           NODE_AUTH_TOKEN: ${{ github.token }}

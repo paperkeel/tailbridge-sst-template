@@ -38,14 +38,14 @@ jobs:
         with:
           node-version: 22
           registry-url: https://npm.pkg.github.com
-          scope: "@bearfire-dev"
+          scope: "@paperkeel"
       - name: Resolve the artifact version
         id: artifact
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
           REQUESTED_VERSION: ${{ inputs.package_version }}
         run: |
-          package=@bearfire-dev/tailscale-railway-quic-bridge
+          package=@paperkeel/tailscale-railway-quic-bridge
           if test -n "$REQUESTED_VERSION"; then
             version="$(npm view "$package@$REQUESTED_VERSION" version --registry=https://npm.pkg.github.com)"
             test "$version" = "$REQUESTED_VERSION"
@@ -59,7 +59,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
           VERSION: ${{ steps.artifact.outputs.version }}
         run: |
-          pnpm add --save-exact "@bearfire-dev/tailscale-railway-quic-bridge@$VERSION" --lockfile-only
+          pnpm add --save-exact "@paperkeel/tailscale-railway-quic-bridge@$VERSION" --lockfile-only
           pnpm install --frozen-lockfile
       - name: Compare the deployed artifact
         id: deployed

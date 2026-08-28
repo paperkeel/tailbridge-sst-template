@@ -15,7 +15,7 @@
 		"remove": "sst remove"
 	},
 	"dependencies": {
-		"@bearfire-dev/tailscale-railway-quic-bridge": "master",
+		"@paperkeel/tailscale-railway-quic-bridge": "master",
 		"@pulumi/command": "1.2.1",
 		"@pulumi/digitalocean": "4.78.0",
 		"@pulumi/pulumi": "3.255.0",

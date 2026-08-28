@@ -16,7 +16,7 @@ This template deploys the published Tailbridge component. It does not build Tail
 
 1. Create a GitHub personal access token with the `read:packages` scope.
 
-2. Give the token access to the `bearfire-dev` package.
+2. Give the token access to the `paperkeel` package.
 
 3. Add the token as the `GH_PACKAGES_TOKEN` secret in the `production` environment.
 
